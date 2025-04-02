@@ -37,6 +37,8 @@ struct ContactForm {
     email: String,
     subject: String,
     message: String,
+    // 🕵️ Honeypot field — should stay empty
+    company: Option<String>,
 }
 
 #[post("/contact", data = "<form>")]
@@ -50,7 +52,15 @@ async fn contact(
         email,
         subject,
         message,
+        company,
     } = form.into_inner();
+// 🛡️ Honeypot check: if filled, it's likely a bot
+if let Some(ref trap) = company {
+    if !trap.trim().is_empty() {
+        warn!("Honeypot field 'company' filled → spam detected");
+        return Err("You cant do that");
+    }
+}
 
     let message_uuid = Uuid::new_v4();
     let message_id = format!("<{message_uuid}@{}>", mailer.server_host);
